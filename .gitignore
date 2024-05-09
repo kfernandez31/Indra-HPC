@@ -1,0 +1,8 @@
+slurm-*.out
+*.tar.gz
+*.jar*
+xml/
+json/
+pkl/
+indra_venv/
+.vscode/
