@@ -1,4 +1,8 @@
-# TODO
 #!/bin/bash
 
-rm -rf slurm-*.out *.tar.gz *.jar* xml json pkl indra_venv
+while IFS= read -r pattern; do
+    echo "Removing files and directories matching: $pattern"
+    rm -rf $pattern
+done < ".gitignore"
+
+echo "Cleanup complete."

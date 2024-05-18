@@ -13,7 +13,7 @@ import math
 import os
 
 logger = logging.getLogger(__name__)
-OFFLINE               = False # True
+OFFLINE               = True
 PICKLING_FREQUENCY    = 1
 
 config = {
@@ -47,6 +47,7 @@ def get_statements_from_xmls():
     end = (config['worker_id'] + 1) * chunk_size
 
     # iterate over your chunk
+    print(f"Starting work over chunk [{start}, {end})...")
     for i, xml_file in enumerate(xml_files[start:end]):
         xml_file = os.path.join(config['xml_dir'], xml_file)
         rp = reach.process_nxml_file(xml_file, offline=OFFLINE, output_fname=get_json_path('reach_output.json'))
@@ -79,7 +80,6 @@ def get_stmts_from_jsons():
 #  indra.statements.statements.stmts_from_json(jsons_in)
     return [] # TODO
 
-# TODO: read_stmts_from_json & AssemblyPipeline::run
 # TODO: batch/paper processing time, assembly per paper/total 
 
 if __name__ == "__main__":
@@ -106,10 +106,10 @@ if __name__ == "__main__":
     ## 1. Get own statements from chunk of xmls
     own_stmts = get_statements_from_xmls()
 
-    ## 2. Consolidate own statements
-    consolidate_stmts(own_stmts, 'consolidation_1', get_json_path('intermediate_results'))
+    # ## 2. Consolidate own statements
+    # consolidate_stmts(own_stmts, 'consolidation_1', get_json_path('intermediate_results'))
 
-    ## 3. Master-only: aggregate workers' result
-    if config['worker_id'] == 0:
-        all_stmts = get_stmts_from_jsons()
-        consolidate_stmts(all_stmts, 'consolidation_2', os.path.join(config['json_dir'], 'final_results.json'))
+    # ## 3. Master-only: aggregate workers' result
+    # if config['worker_id'] == 0:
+    #     all_stmts = get_stmts_from_jsons()
+    #     consolidate_stmts(all_stmts, 'consolidation_2', os.path.join(config['json_dir'], 'final_results.json'))

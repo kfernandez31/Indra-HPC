@@ -53,7 +53,7 @@ for archive in $archives_list; do
     rm -f $archive
 done
 
-echo "Extracted $xml_cnt_cur XMLs into $XML_DIR"
+echo "Extracted $xml_cnt_cur XMLs into directory $XML_DIR"
 
 # Cleanup
 rm -rf "$TEMP_DIR"

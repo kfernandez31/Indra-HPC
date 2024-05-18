@@ -1,5 +1,6 @@
 slurm-*.out
 *.tar.gz
+*.jar
 *.jar*
 xml/
 json/
