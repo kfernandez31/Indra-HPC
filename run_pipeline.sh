@@ -31,7 +31,16 @@ source "$VENV_PATH"/bin/activate
 
 echo "[3/7] Installing Indra with extras..."
 
-pip install -r requirements.txt --quiet 2>/dev/null
+# PIP_OPTIONS="--quiet 2>/dev/null"
+PIP_OPTIONS=""
+
+pip install indra          $PIP_OPTIONS
+pip install cython         $PIP_OPTIONS
+pip install pyjnius==1.1.4 $PIP_OPTIONS # for offfline reach 
+pip install gilda          $PIP_OPTIONS # for offfline grounding
+
+# pi install -r requirements.txt $PIP_OPTIONS # TODO: try this instead as it's nicer
+
 
 #################### 4. Get Reach jar ####################
 

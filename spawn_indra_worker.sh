@@ -1,11 +1,16 @@
 #!/bin/bash -l
+
 #SBATCH --job-name indra_worker
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
-#SBATCH --time 0-04:00:00  # TODO: toggle
+#SBATCH --time 0-02:00:00  # TODO: toggle
 #SBATCH --partition batch
 #SBATCH --qos normal
+#SBATCH --output SLURM_%x_%j.log
+#SBATCH --error  SLURM_%x_%j.log
+
+source utils.sh
 
 #################### 1. Load modules ####################
 
@@ -19,6 +24,7 @@ module load lang/Java/1.8.0_241
 echo "[2/3] Sourcing python venv..."
 
 VENV_PATH=$1
+check_defined VENV_PATH
 source "$VENV_PATH"/bin/activate
 
 #################### 3. Run processing on multiple workers ####################
