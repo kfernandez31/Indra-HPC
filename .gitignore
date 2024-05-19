@@ -1,4 +1,5 @@
 slurm-*.out
+SLURM-*.out
 *.tar.gz
 *.jar
 *.jar*

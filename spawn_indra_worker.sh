@@ -12,6 +12,27 @@
 
 source utils.sh
 
+VENV_PATH="$1"
+check_defined VENV_PATH
+
+NUM_WORKERS="$2"
+check_defined NUM_WORKERS
+
+WORKER_ID="$3"
+check_defined WORKER_ID
+
+XML_DIR="$4"
+check_defined XML_DIR
+
+PKL_DIR="$5"
+check_defined PKL_DIR
+
+JSON_DIR="$6"
+check_defined JSON_DIR
+
+CSV_DIR="$7"
+check_defined CSV_DIR
+
 #################### 1. Load modules ####################
 
 echo "[1/3] Loading SLURM modules..."
@@ -23,17 +44,16 @@ module load lang/Java/1.8.0_241
 
 echo "[2/3] Sourcing python venv..."
 
-VENV_PATH=$1
-check_defined VENV_PATH
 source "$VENV_PATH"/bin/activate
 
 #################### 3. Run processing on multiple workers ####################
 
 echo "[3/3] Starting work..."
 
-python3 indra_worker.py \
-    --num_workers="$2"  \
-    --worker_id="$3"    \
-    --xml_dir="$4"      \
-    --pkl_dir="$5"      \
-    --json_dir="$6"
+python3 indra_worker.py           \
+    --num_workers="$NUM_WORKERS"  \
+    --worker_id="$WORKER_ID"      \
+    --xml_dir="$XML_DIR"          \
+    --pkl_dir="$PKL_DIR"          \
+    --json_dir="$JSON_DIR"        \
+    --csv_dir="$CSV_DIR"

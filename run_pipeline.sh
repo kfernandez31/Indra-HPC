@@ -9,6 +9,9 @@
 
 source utils.sh
 
+INDRA_NUM_WORKERS="$1"
+check_defined INDRA_NUM_WORKERS
+
 #################### 1. Load SLURM modules ####################
 
 echo "[1/7] Loading SLURM modules..."
@@ -36,8 +39,8 @@ PIP_OPTIONS=""
 
 pip install indra          $PIP_OPTIONS
 pip install cython         $PIP_OPTIONS
-pip install pyjnius==1.1.4 $PIP_OPTIONS # for offfline reach 
-pip install gilda          $PIP_OPTIONS # for offfline grounding
+pip install pyjnius==1.1.4 $PIP_OPTIONS # for offline Reach 
+pip install gilda          $PIP_OPTIONS # for offline grounding
 
 # pi install -r requirements.txt $PIP_OPTIONS # TODO: try this instead as it's nicer
 
@@ -81,11 +84,9 @@ echo "[7/7] Spawning workers..."
 
 PKL_DIR="pkl"
 JSON_DIR="json"
-mkdir -p "$PKL_DIR" "$JSON_DIR"
-
-INDRA_NUM_WORKERS=$1
-check_defined INDRA_NUM_WORKERS
+CSV_DIR="csv"
+mkdir -p "$PKL_DIR" "$JSON_DIR" "$CSV_DIR"
 
 for ((i=0; i<INDRA_NUM_WORKERS; i++)); do
-    sbatch spawn_indra_worker.sh "$VENV_PATH" "$INDRA_NUM_WORKERS" "$i" "$XML_DIR" "$PKL_DIR" "$JSON_DIR"
+    sbatch spawn_indra_worker.sh "$VENV_PATH" "$INDRA_NUM_WORKERS" "$i" "$XML_DIR" "$PKL_DIR" "$JSON_DIR" "$CSV_DIR"
 done
