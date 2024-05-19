@@ -1,24 +1,24 @@
+from collections             import defaultdict
 from indra.pipeline.pipeline import AssemblyPipeline
 from indra.statements        import statements
 from indra.sources           import reach
 from indra.tools             import assemble_corpus as ac
-from collections             import defaultdict
+from filelock                import FileLock, Timeout
+from math                    import ceil
 from statistics              import mean
 import argparse
 import json
 import logging
-import math
 import os
 import pandas as pd
 import pickle
 import requests
 import time
 
-# TODO: write using pipe to zip OR zip & checksum...?
-
 logger = logging.getLogger(__name__)
-PICKLING_FREQUENCY = 1
+PICKLING_FREQUENCY = 100
 
+local_stats = {}
 config = {}
 
 processing_stats = [f'processing_{stat}_time'    for stat in ['mean', 'total']]
@@ -27,7 +27,8 @@ df_columns = assembly_stats + processing_stats
 stats_df = pd.DataFrame(columns=df_columns)
 
 def to_worker_fname(fname, wid=None):
-    return f"worker-{config['worker_id'] if wid is None else wid}:{fname}"
+    wid = config['worker_id'] if wid is None else wid
+    return f'worker-{wid}:{fname}'
 
 def get_path(parent_dir, fname, wid=None):
     return os.path.join(config[parent_dir], to_worker_fname(fname, wid))
@@ -49,7 +50,7 @@ def get_statements_from_xmls():
     pkl_file = get_path('json_dir', 'get_statements_from_xmls.pkl')
 
     xml_files = os.listdir(config['xml_dir'])
-    chunk_size = math.ceil(len(xml_files) / config['num_workers'])
+    chunk_size = ceil(len(xml_files) / config['num_workers'])
 
     # Try to start off at a previous checkpoint
     res, start = load_or_default(pkl_file, ([], config['worker_id'] * chunk_size))    
@@ -82,6 +83,15 @@ def get_statements_from_xmls():
 
     return res
 
+def atomically_io(callback, wid=None):
+    lock_path = to_worker_fname('lock', wid)
+    while True:
+        try:
+            with FileLock(lock_path, timeout=0):
+                return callback()
+        except Timeout: # Lock still under use
+            pass
+
 def consolidate_stmts(stmts, pkl_prefix, out_filename):
     # Grounding
     pkl_file = get_path('pkl_dir', pkl_prefix + '_grounding.pkl')
@@ -98,33 +108,77 @@ def consolidate_stmts(stmts, pkl_prefix, out_filename):
     t, stmts = timeit(lambda: load_or_compute(pkl_file, lambda: ac.run_preassembly(stmts, save=pkl_file, return_toplevel=False, poolsize=os.cpu_count())))
     local_stats['consolidation_preassembly_time'] = t
 
-    # Save statements to a json
-    statements.stmts_to_json_file(stmts, get_path('json_dir', out_filename))
-
-    # More statistics
+    # Get more statistics
     local_stats['consolidation_total_time'] = sum([v for k, v in local_stats.items() if k.startswith('consolidation')])
+
+    # Save statements to a json
+    json_path = get_path('json_dir', out_filename)
+    statements.stmts_to_json_file(stmts, json_path)
+    # TODO: pipe to a zip w/checksum...?
 
 def dump_local_stats():
     local_stats_df = pd.DataFrame(local_stats, index=[0])
     local_stats_df['worker_id'] = config['worker_id']
-    local_stats_df.to_csv(get_path('csv_dir', 'local_stats.csv'), index=False)
+
+    csv_path = get_path('csv_dir', 'local_stats.csv')
+    atomically_io(lambda: local_stats_df.to_csv(csv_path, index=False))
 
 def aggregate_local_stats():
-    all_stats_dfs = [pd.read_csv(get_path('csv_dir', f'local_stats.csv', wid), index_col=0) for wid in range(config['num_workers'])]
-    pd.concat(all_stats_dfs).to_csv(get_path('csv_dir', 'final_stats.csv')) # TODO: add some processing such as taking the mean
+    def try_read_csv(csv_path):
+        if os.path.exists(csv_path) and os.stat(csv_path).st_size > 0:
+            return pd.read_csv(csv_path, index_col=0)
+        return None
+
+    is_active  = [False] * config['num_workers']
+    cnt_active = config['num_workers']
+    worker_dfs = [None] * config['num_workers']
+
+    while cnt_active > 0:
+        for wid in range(config['num_workers']):
+            csv_path = get_path('csv_dir', 'local_stats.csv', wid)
+            worker_dfs[wid] = atomically_io(lambda: try_read_csv(csv_path), wid)
+            if worker_dfs[wid] is not None:
+                is_active[wid] = False
+                cnt_active -= 1
+    
+    # Remove locks (not needed anymore)
+    for wid in range(config['num_workers']):  
+        lock_path = to_worker_fname('lock', wid)
+        os.remove(lock_path)
+
+    return pd.concat(worker_dfs)
+
+def make_final_stats(all_local_stats_df):
+    # Calculate the mean of each column
+    mean_values = all_local_stats_df.mean(numeric_only=True)
+
+    # Create a new DataFrame row summarizing the others
+    new_row_id = 'total (mean)'
+    mean_row = pd.DataFrame([mean_values], index=[new_row_id])
+    mean_row['worker_id'] =  new_row_id
+
+    # Dump the updated DataFrame
+    final_stats_df = pd.concat([mean_row, all_local_stats_df], ignore_index=False)
+    csv_path = get_path('csv_dir', 'final_stats.csv')
+    final_stats_df.to_csv(csv_path, index=True)
+
+    return final_stats_df
+
 
 def get_stmts_from_jsons():
-    jsons = os.listdir(config['json_dir'])
-    return [statements.stmts_from_json_file(os.path.join(config['json_dir'], json)) for json in jsons]
+    stmts = []
+    for json in os.listdir(config['json_dir']):
+        stmts += statements.stmts_from_json_file(os.path.join(config['json_dir'], json))
+    return stmts
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='INDRA worker process.')
-    parser.add_argument('--num_workers', type=int, required=True, help='Specify the number of workers')
-    parser.add_argument('--worker_id',   type=int, required=True, help='Specify the worker id')
-    parser.add_argument('--xml_dir',               required=True, help='Specify the xml directory')
-    parser.add_argument('--pkl_dir',               required=True, help='Specify the pickle directory')
-    parser.add_argument('--json_dir',              required=True, help='Specify the json directory')
-    parser.add_argument('--csv_dir',             required=True, help='Specify the statistics directory')
+    parser.add_argument('--num_workers', type=int, required=True,  help='Specify the number of workers')
+    parser.add_argument('--worker_id',   type=int, required=True,  help='Specify the worker id')
+    parser.add_argument('--xml_dir',               default='xml',  help='Specify the xml directory')
+    parser.add_argument('--pkl_dir',               default='pkl',  help='Specify the pickle directory')
+    parser.add_argument('--json_dir',              default='json', help='Specify the json directory')
+    parser.add_argument('--csv_dir',               default='csv',  help='Specify the csv directory')
     args = parser.parse_args()
 
     config['worker_id']   = args.worker_id
@@ -143,19 +197,16 @@ if __name__ == "__main__":
     ## 1. Get local statements from chunk of xmls
     local_stmts = get_statements_from_xmls()
 
-    from indra import get_config
-    print(get_config('REACHPATH'))
-    print(get_config('CLASSPATH'))
-
     ## 2. Consolidate local statements
-    consolidate_stmts(local_stmts, 'consolidation_local', get_path('json_dir', 'intermediate_results.json'))
+    consolidate_stmts(local_stmts, 'consolidation_local', 'local_results.json')
 
     ## 3. Dump local stats to CSV file
     dump_local_stats()
 
-    ## 4. Master-only: aggregate workers' results
+    ## *4. Master-only: wait for workers to finish and aggregate their results
     if config['worker_id'] == 0:
-        all_stmts = get_stmts_from_jsons()
-        consolidate_stmts(all_stmts, 'consolidation_final', get_path('json_dir', 'final_results.json')) 
+        all_local_stats_df = aggregate_local_stats()
+        make_final_stats(all_local_stats_df)
 
-        aggregate_local_stats()
+        all_stmts = get_stmts_from_jsons()
+        consolidate_stmts(all_stmts, 'consolidation_final', 'final_results.json') 

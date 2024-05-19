@@ -10,6 +10,8 @@
 #SBATCH --output SLURM_%x_%j.log
 #SBATCH --error  SLURM_%x_%j.log
 
+#################### 0. Get arguments ####################
+
 source utils.sh
 
 VENV_PATH="$1"
@@ -48,7 +50,7 @@ source "$VENV_PATH"/bin/activate
 
 #################### 3. Run processing on multiple workers ####################
 
-echo "[3/3] Starting work..."
+echo "[3/3] Worker $WORKER_ID Starting work..."
 
 python3 indra_worker.py           \
     --num_workers="$NUM_WORKERS"  \
