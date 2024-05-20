@@ -4,11 +4,13 @@
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
-#SBATCH --time 0-02:00:00  # TODO: toggle
+#SBATCH --time 02:00:00  # TODO: toggle
 #SBATCH --partition batch
 #SBATCH --qos normal
 #SBATCH --output SLURM_%x_%j.log
 #SBATCH --error  SLURM_%x_%j.log
+
+# TODO: specify memory (--mem)?
 
 #################### 0. Get arguments ####################
 
@@ -40,7 +42,7 @@ check_defined CSV_DIR
 echo "[1/3] Loading SLURM modules..."
 
 module load lang/Python
-module load lang/Java/1.8.0_241
+module load lang/Java/11.0.2 
 
 #################### 2. Source the Python venv ####################
 
@@ -59,3 +61,11 @@ python3 indra_worker.py           \
     --pkl_dir="$PKL_DIR"          \
     --json_dir="$JSON_DIR"        \
     --csv_dir="$CSV_DIR"
+
+# python3 indra_worker.py \
+#     --num_workers=1     \
+#     --worker_id=0       \
+#     --xml_dir=xml       \
+#     --pkl_dir=pkl       \
+#     --json_dir=json     \
+#     --csv_dir=csv

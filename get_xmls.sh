@@ -9,6 +9,7 @@ check_defined XML_CNT_THRESH
 
 XML_DIR=$2
 check_defined XML_DIR
+rm -rf "$XML_DIR"
 mkdir -p "$XML_DIR"
 
 TEMP_DIR=".temp"
@@ -50,10 +51,10 @@ for archive in $archives_list; do
 
     # Cleanup
     rm -rf "$TEMP_DIR/*"
-    rm -f $archive
+    rm -f *.tar.gz
 done
 
-echo "Extracted $xml_cnt_cur XMLs into directory $XML_DIR"
+echo "Extracted $xml_cnt_cur XMLs into directory '$XML_DIR'"
 
 # Cleanup
 rm -rf "$TEMP_DIR"

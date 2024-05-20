@@ -1,13 +1,5 @@
 #!/bin/bash -l
 
-# TODO: do these parameters get passed to Slurm, or do we have to do `srun` with them in the cmd line?
-#SBATCH --nodes 1
-#SBATCH --ntasks-per-node 1
-#SBATCH --cpus-per-task   4
-#SBATCH --time 00:30:00
-#SBATCH --partition batch
-#SBATCH --qos normal
-
 #################### 0. Get arguments ####################
 
 source utils.sh
@@ -20,13 +12,13 @@ check_defined INDRA_NUM_WORKERS
 echo "[1/7] Loading SLURM modules..."
 
 module load lang/Python
-module load lang/Java/1.8.0_241
+module load lang/Java/11.0.2 
 
 #################### 2. Set up a Python venv  ####################
 
 echo "[2/7] Creating Python venv..."
 
-VENV_PATH="indra_venv"
+VENV_PATH="$(pwd)/indra_venv"
 if [ ! -d "$VENV_PATH" ]; then
     python3 -m venv "$VENV_PATH"
 fi
@@ -37,20 +29,21 @@ source "$VENV_PATH"/bin/activate
 
 echo "[3/7] Installing Indra with extras..."
 
-# PIP_OPTIONS="--quiet 2>/dev/null"
-PIP_OPTIONS=""
+pip install --upgrade pip --quiet 2>/dev/null
+pip install cython        --quiet 2>/dev/null # for pyjnius
+pip install pyjnius       --quiet 2>/dev/null # for offline Reach 
+pip install gilda         --quiet 2>/dev/null # for offline grounding
+pip install filelock      --quiet 2>/dev/null # for worker synchronization
+pip install install-jdk   --quiet 2>/dev/null
+pip install indra         --quiet 2>/dev/null
 
-# pip install indra          $PIP_OPTIONS
-# pip install cython         $PIP_OPTIONS # for pyjnius
-# pip install pyjnius==1.1.4 $PIP_OPTIONS # for offline Reach 
-# pip install gilda          $PIP_OPTIONS # for offline grounding
-# pip install filelock       $PIP_OPTIONS # for worker synchronization
-
-pip install -r requirements.txt $PIP_OPTIONS # TODO: try this instead as it's nicer
+# pip install --upgrade pip
+# pip install -r requirements.txt
+# --quiet 2>/dev/null # TODO: try this instead as it's nicer
 
 #################### 4. Obtain Reach jar ####################
 
-echo "[4/7] Downloading Reach jar..."
+echo "[4/7] (omitted) Downloading Reach jar..."
 # Versions available here: https://central.sonatype.com/artifact/org.clulab/reach-main_2.12/versions
 
 # REACHPATH="reach-main_2.12-1.6.2.jar"
@@ -63,14 +56,15 @@ echo "[4/7] Downloading Reach jar..."
 
 echo "[5/7] Configuring Indra..."
 
-REACHPATH="$(pwd)/reach-1.6.3-SNAPSHOT-FAT.jar" # TODO: make sure to download this in step 4
+REACHPATH="$(pwd)/reach-1.6.3-SNAPSHOT-FAT.jar"
+sed -i "/^REACHPATH =/c\REACHPATH = ${REACHPATH}" "$VENV_PATH"/lib/python3.8/site-packages/indra/resources/default_config.ini
 sed -i "/^REACHPATH =/c\REACHPATH = ${REACHPATH}" ~/.config/indra/config.ini
 
 #################### 6. Create the dataset ####################
 
 echo "[6/7] Creating the dataset..."
 
-XML_CNT_THRESH=1000 # TODO: make it 100k
+XML_CNT_THRESH=2 # TODO: make it 100k
 XML_DIR="xml"
 
 if [ ! -d "$XML_DIR" ] || [ "$(ls "$XML_DIR" | wc -l)" -ne "$XML_CNT_THRESH" ]; then

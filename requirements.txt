@@ -1,5 +1,6 @@
-indra
 cython
 pyjnius==1.1.4
 gilda
 filelock
+install-jdk
+indra
