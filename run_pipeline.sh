@@ -42,9 +42,9 @@ pip install filelock      --quiet 2>/dev/null # for worker synchronization
 pip install install-jdk   --quiet 2>/dev/null
 pip install indra         --quiet 2>/dev/null
 
-# pip install --upgrade pip
-# pip install -r requirements.txt
-# --quiet 2>/dev/null # TODO: try this instead as it's nicer
+# TODO: try this instead as it's nicer:
+# pip install --upgrade pip       --quiet 2>/dev/null
+# pip install -r requirements.txt --quiet 2>/dev/null
 
 #################### 4. Obtain Reach jar ####################
 

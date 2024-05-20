@@ -166,7 +166,7 @@ def collect_local_stats():
 def dump_local_stats():
     log_info(f'Dumping statistics of local processing...')
     
-    stats_df = pd.DataFrame(local_stats, index=[0])
+    stats_df = pd.DataFrame(local_stats, index=['worker_id'])
     stats_df['worker_id'] = config['worker_id']
     columns_order = ['worker_id'] + [col for col in stats_df.columns if col != 'worker_id']
     stats_df = stats_df[columns_order]
@@ -174,15 +174,19 @@ def dump_local_stats():
     csv_path = get_own_path('local_consolidation_stats.csv')
     atomically_io(lambda: stats_df.to_csv(csv_path, index=False), wid=config['worker_id'])
 
-def dump_final_stats(stats_df):
+def dump_master_stats(aggregated_stats_df):
     log_info(f'Dumping statistics of final processing...', master=True)
 
-    stats_df.loc['mean'] = stats_df.mean()
-    stats_df.loc['min']  = stats_df.min()
-    stats_df.loc['max']  = stats_df.mean()
+    aggregated_stats_df.loc['mean'] = aggregated_stats_df.mean()
+    aggregated_stats_df.loc['min']  = aggregated_stats_df.min()
+    aggregated_stats_df.loc['max']  = aggregated_stats_df.mean()
 
+    csv_path = get_own_path('local_consolidation_stats.csv')
+    aggregated_stats_df.to_csv(csv_path, index=True)
+
+    final_stats_df = pd.DataFrame(final_stats, index=[0])
     csv_path = get_own_path('final_consolidation_stats.csv')
-    stats_df.to_csv(csv_path, index=True)
+    final_stats_df.to_csv(csv_path, index=True)
 
 def get_stmts_from_jsons():
     log_info('Extracting local statements from local jsons...', master=True)
@@ -236,5 +240,5 @@ if __name__ == "__main__":
         consolidate_stmts(all_stmts, master=True)
 
         ### 6. Dump aggregated statistics to CSV file
-        dump_final_stats(collected_stats_df)
+        dump_master_stats(collected_stats_df)
         os.rename(get_own_path(''), os.path.join(config['output_path'], 'MASTER'))
