@@ -2,9 +2,8 @@ SLURM-*.out
 *.tar.gz
 *.jar
 *.jar*
-xml/
-json/
-pkl/
-csv/
+.temp/
+dataset/
+results/
 indra_venv/
 .vscode/

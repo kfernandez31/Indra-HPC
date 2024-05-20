@@ -1,16 +1,25 @@
 # Running
 
-To run the pipeline on `NUM_WORKERS=1,2,...` nodes, type:
-```
-srun run_pipeline.sh <INDRA_NUM_WORKERS>
+1. Download the Reach jar available [here](https://owncloud.lcsb.uni.lu/s/WAvPyRYX4B3AfbM/authenticate)
+
+2. Type
+```sh
+srun run_pipeline.sh <number of workers> <number of XML files>
 ```
 
-# To do:
+# TODOs
 - [ ] Test for most optimal number of workers
-    - [ ] Obtain performance plots out of the CSVs
-- [ ] Reorganize project structure
-    - [ ] Have a single dir `results` with subdirs for each `worker-i` and `master`
-- [ ] Check if workers' progress is saved correctly
-    - [ ] At `get_statements_from_xmls`
-    - [ ] At `consolidate_stmts` (local)
-    - [ ] At `consolidate_stmts` (master)
+    - [ ] Plot the speedup curve as a function of the worker count
+- [ ] Verify that workers' progress is saved correctly with Pickle
+    - [ ] `get_statements_from_xmls`
+    - [ ] `consolidate_stmts` (local)
+    - [ ] `consolidate_stmts` (master)
+- [ ] Toggle walltime in spawn_worker.sh (to be a polite ULHPC user)
+- [ ] Toggle PICKLING_FREQENCY in indra_worker.py
+
+# Possible refinements
+- Some fault tolerance mechanisms
+    - eg. a time cutoff for stragglers, or a server that
+    - distributed leader election and dynamic work assignment
+    - respawning processes
+- Piping to zips with checksum...?

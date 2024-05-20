@@ -4,13 +4,13 @@ source utils.sh
 
 BASE_URL="https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_bulk/oa_comm/xml/"
 
-XML_CNT_THRESH=$1
-check_defined XML_CNT_THRESH
-
-XML_DIR=$2
+XML_DIR=$1
 check_defined XML_DIR
 rm -rf "$XML_DIR"
 mkdir -p "$XML_DIR"
+
+XML_CNT_THRESH=$2
+check_defined XML_CNT_THRESH
 
 TEMP_DIR=".temp"
 rm -rf "$TEMP_DIR"
@@ -19,12 +19,12 @@ mkdir -p "$TEMP_DIR"
 xml_cnt_cur=0
 archives_list=$(curl -s "$BASE_URL" | grep -oP 'href="\K[^"]+\.tar\.gz')
 for archive in $archives_list; do
+    # Threshold achieved => break
     if [ $xml_cnt_cur -ge $XML_CNT_THRESH ]; then
         break
     fi
 
     # Download and extract the archive
-    
     echo "Retrieving new XMLs..."
     curl -sO "$BASE_URL$archive"
     tar -xzf $archive -C $TEMP_DIR

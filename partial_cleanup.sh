@@ -1,10 +1,8 @@
 #!/bin/bash
 
 rm -rf SLURM*
-rm -rf json
-rm -rf pkl
-rm -rf csv
-rm -rf *lock
+rm -rf results
 rm -rf *.tar.gz
+rm -rf .temp
 
 echo "Partial cleanup complete"
