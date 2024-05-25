@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# NOTE: Takes around 5m24s for 100k articles
+
 source utils.sh
 
 BASE_URL="https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_bulk/oa_comm/xml/"

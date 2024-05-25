@@ -1,16 +1,26 @@
 #!/bin/bash -l
-
-# Loosely based on: https://indra.readthedocs.io/en/stable/installation.html
-
-#################### 0. Get arguments ####################
+#SBATCH --job-name        indra_pipeline
+#SBATCH --output          SLURM_%x_%j.log
+#SBATCH --error           SLURM_%x_%j.log
+#SBATCH --ntasks-per-node 1
+#SBATCH --time            01:00:00
+#SBATCH --partition       batch
+#SBATCH --qos             normal
+#SBATCH --mem             16GB
 
 source utils.sh
 
-NUM_WORKERS="$1"
-check_defined NUM_WORKERS
 
-INPUT_CNT_THRESH="$2" 
-check_defined INPUT_CNT_THRESH
+INPUT_CNT_THRESH="$1"
+if [ -z "${INPUT_CNT_THRESH}" ]; then
+    INPUT_CNT_THRESH=100000
+fi
+
+# Sanity check
+if [ "$SLURM_NPROCS" -gt "$INPUT_CNT_THRESH" ]; then
+    echo "Error: SLURM_NPROCS must lie in the range [1, INPUT_CNT_THRESH=$INPUT_CNT_THRESH)"
+    exit 1
+fi
 
 #################### 1. Load SLURM modules ####################
 
@@ -67,9 +77,9 @@ sed -i "/^REACHPATH =/c\REACHPATH = ${REACHPATH}" ~/.config/indra/config.ini
 
 #################### 6. Create the dataset ####################
 
-echo "[5/6] Creating the dataset..."
+echo "[5/6] Creating the dataset ($INPUT_CNT_THRESH articles)..."
 
-INPUT_PATH="dataset"
+INPUT_PATH="dataset-$INPUT_CNT_THRESH"
 
 if [ ! -d "$INPUT_PATH" ] || [ "$(ls "$INPUT_PATH" | wc -l)" -ne "$INPUT_CNT_THRESH" ]; then
     ./get_xmls.sh "$INPUT_PATH" "$INPUT_CNT_THRESH"
@@ -77,11 +87,14 @@ fi
 
 #################### 7. Run processing on multiple workers ####################
 
-echo "[6/6] Spawning $NUM_WORKERS workers..."
+echo "[6/6] Spawning $SLURM_NPROCS workers..."
 
-OUTPUT_PATH="results"
-mkdir "$OUTPUT_PATH"
+OUTPUT_PATH="results-$SLURM_NPROCS-workers-$INPUT_CNT_THRESH-articles"
+mkdir -p "$OUTPUT_PATH"
 
-for ((i=0; i<NUM_WORKERS; i++)); do
-    sbatch spawn_indra_worker.sh "$VENV_PATH" "$INPUT_PATH" "$OUTPUT_PATH" "$NUM_WORKERS" "$i"
-done
+start_time=$(date +%s)
+srun --ntasks="$SLURM_NPROCS" ./spawn_indra_worker.sh "$INPUT_PATH" "$OUTPUT_PATH"
+end_time=$(date +%s)
+elapsed_time=$((end_time - start_time))
+echo "Results saved in '$OUTPUT_PATH'"
+echo "Took $elapsed_time seconds"

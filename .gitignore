@@ -1,9 +1,9 @@
-SLURM-*.out
+SLURM*
 *.tar.gz
 *.jar
 *.jar*
 .temp/
-dataset/
-results/
+dataset*/
+results*/
 indra_venv/
 .vscode/

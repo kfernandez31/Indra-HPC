@@ -22,13 +22,13 @@ local_stats = {}
 final_stats = {}
 config      = {}
 
-processing_stats = [f'processing_{stat}'    for stat in ['mean', 'total']]
-assembly_stats   = [f'consolidation_{stat}' for stat in ['grounding', 'sequence', 'preassembly', 'total']]
+processing_stats = [f"processing_{stat}"    for stat in ['mean', 'total']]
+assembly_stats   = [f"consolidation_{stat}" for stat in ['grounding', 'sequence', 'preassembly', 'total']]
 df_columns = assembly_stats + processing_stats
 stats_df = pd.DataFrame(columns=df_columns)
 
 def pretty_worker_name(wid):
-    return f'worker-{wid}'
+    return f"worker-{wid}"
 
 def get_path(fname, wid):
     return os.path.join(config['output_path'], pretty_worker_name(wid), fname)
@@ -51,7 +51,7 @@ def log_info(message, master=False):
     logger.info(f"{wname}: {message}")
 
 def get_statements_from_xmls():
-    log_info('Obtaining local statements from XMLs...')
+    log_info("Obtaining local statements from XMLs...")
 
     pkl_file = get_own_path('local_statements_progress.pkl')
     xml_files = [f for f in os.listdir(config['input_path']) if f.endswith('.xml')]
@@ -66,7 +66,7 @@ def get_statements_from_xmls():
         return round(100 * ((i + 1) / chunk_size), 2)
 
     if res != []:
-        log_info(f'Resuming work from at {progress(i)}% progress')
+        log_info(f"Resuming work from at {progress(i)}% progress")
 
     times = []
     for i, xml_file in enumerate(xml_files[start:end]):
@@ -89,7 +89,7 @@ def get_statements_from_xmls():
             
         # Periodically save progress
         if (i + 1 - start) % PICKLING_FREQUENCY == 0:
-            log_info('Saving progress to pickle file...')
+            log_info("Saving progress to pickle file...")
             pickle.dump((res, i), file=open(pkl_file, 'wb'))
 
         log_info(f"Progress: {i + 1}/{chunk_size} articles ({progress(i)}%)")
@@ -111,7 +111,7 @@ def atomically_io(callback, wid):
 
 def consolidate_stmts(stmts, master=False):
     phase = ('final' if master else 'local')
-    log_info('Consolidating {phase} statements...', master=master)
+    log_info(f"Consolidating {phase} statements...", master=master)
     phase += '_consolidation'
 
     stats = final_stats if master else local_stats
@@ -135,7 +135,7 @@ def consolidate_stmts(stmts, master=False):
     statements.stmts_to_json_file(stmts, json_path)
 
 def collect_local_stats():
-    log_info('Aggregating statistics of local processing...', master=True)
+    log_info("Aggregating statistics of local processing...", master=True)
     
     def try_read_csv(csv_path):
         if os.path.exists(csv_path) and os.stat(csv_path).st_size > 0:
@@ -146,8 +146,12 @@ def collect_local_stats():
     cnt_active = config['num_workers']
 
     while cnt_active > 0:
-        log_info('Waiting for workers to finish...', master=True)
-        time.sleep(2) # to not overheat the processor
+        stragglers = [wid for wid in range(config['num_workers']) if worker_dfs[wid] is None]
+        log_info(f"Waiting for {cnt_active} workers to finish...", master=True)
+        log_info(f"Stragglers: {stragglers}", master=True)
+
+
+        time.sleep(5) # to not overheat the processor
 
         for wid in range(config['num_workers']):
             if worker_dfs[wid] is not None:
@@ -164,7 +168,7 @@ def collect_local_stats():
     return pd.concat(worker_dfs, ignore_index=False)
 
 def dump_local_stats():
-    log_info(f'Dumping statistics of local processing...')
+    log_info("Dumping statistics of local processing...")
     
     stats_df = pd.DataFrame(local_stats, index=['worker_id'])
     stats_df['worker_id'] = config['worker_id']
@@ -173,9 +177,10 @@ def dump_local_stats():
 
     csv_path = get_own_path('local_consolidation_stats.csv')
     atomically_io(lambda: stats_df.to_csv(csv_path, index=False), wid=config['worker_id'])
+    log_info("FINISHED!")
 
 def dump_master_stats(aggregated_stats_df):
-    log_info(f'Dumping statistics of final processing...', master=True)
+    log_info("Dumping statistics of final processing...", master=True)
 
     aggregated_stats_df.loc['mean'] = aggregated_stats_df.mean()
     aggregated_stats_df.loc['min']  = aggregated_stats_df.min()
@@ -187,9 +192,10 @@ def dump_master_stats(aggregated_stats_df):
     final_stats_df = pd.DataFrame(final_stats, index=[0])
     csv_path = get_own_path('final_consolidation_stats.csv')
     final_stats_df.to_csv(csv_path, index=True)
+    log_info("FINISHED!", master=True)
 
 def get_stmts_from_jsons():
-    log_info('Extracting local statements from local jsons...', master=True)
+    log_info("Extracting local statements from local jsons...", master=True)
 
     stmts = []
     for wid in range(config['num_workers']):
@@ -201,10 +207,10 @@ def get_stmts_from_jsons():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='INDRA worker process.')
-    parser.add_argument('--num_workers', required=True, help='Specify the number of workers', type=int)
-    parser.add_argument('--worker_id',   required=True, help='Specify the worker id',         type=int)
-    parser.add_argument('--input_path',  required=True, help='Specify the path to the input directory')
-    parser.add_argument('--output_path', required=True, help='Specify the path to the output directory')
+    parser.add_argument('--num_workers', required=True, help="Specify the number of workers", type=int)
+    parser.add_argument('--worker_id',   required=True, help="Specify the worker id",         type=int)
+    parser.add_argument('--input_path',  required=True, help="Specify the path to the input directory")
+    parser.add_argument('--output_path', required=True, help="Specify the path to the output directory")
     args = parser.parse_args()
 
     config['num_workers'] = args.num_workers
@@ -213,7 +219,7 @@ if __name__ == "__main__":
     config['output_path'] = args.output_path
 
     if config['worker_id'] not in range(0, config['num_workers']):
-        parser.error("worker_id must be from the range [0, num_workers)")
+        parser.error("worker_id must lie in the range [0, num_workers)")
 
     os.makedirs(get_own_path(''), exist_ok=True)
 
@@ -230,7 +236,7 @@ if __name__ == "__main__":
 
     ## (Master-only)
     if config['worker_id'] == 0:
-        config['worker_id'] = "MASTER"
+        config['worker_id'] = 'MASTER'
         os.makedirs(get_own_path(''), exist_ok=True)
         ### 4. Wait for workers to finish, collect their statistics
         collected_stats_df = collect_local_stats()

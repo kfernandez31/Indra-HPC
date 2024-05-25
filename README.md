@@ -1,45 +1,47 @@
 # Indra-HPC
 
-## Description
+## High-level overview
 
-This is a realistic HPC computational biology pipeline using the [Indra](http://www.indra.bio/) text mining framework. The parallelisation algorithm used is simple:
+This is a realistic computational biology pipeline on HPC using the [Indra](http://www.indra.bio/) text mining framework. The parallelisation algorithm employed is simple:
 - Phase 1 (local): Launch $n$ workers on $m$ inputs, having each worker handle roughly $\frac{n}{m}$ inputs
-- Phase 2 (master): Select a worker (in our case it is always worker 0) to wait until all finish and have it summarize their results. 
+- Phase 2 (master): Select a worker (in our case it is always worker 0) to become the master. It shall wait until all workers finish and will summarize their results. 
 
-## Scripts' description
+## Individual scripts' description
 
-The only script you can care about is `run_pipeline.sh`, which has been described in the next section. This script performs some setup work and finally calls the `spawn_indra_worker.sh` script in a loop which is but a context-providing wrapper over `indra_worker.py`, the "meat and potatoes" of the whole pipeline. 
+The only script you need to about is `run_pipeline.sh`, which has been described in the next section. 
 
-Other files:
-- `utils.sh` - self-explanatory,
-- `watch_all.sh` - allows you to monitor in real-time all your workers' outputs (`cat`s their SLURM output files and displays them all together),
+This script performs some setup work, calls `get_xmls.sh` to create the articles dataset and finally calls `spawn_indra_worker.sh` which is but a wrapper over `indra_worker.py`, the "meat and potatoes" of the whole pipeline. 
+
+Utilities:
+- `watch_all.sh` - displays all your workers' outputs as they're created (in real time),
 - `watch_one.sh` - like `watch_all.sh` but for one job,
-- `watch_queue.sh` - put this in a small terminal window on the side to monitor in real-time how many of your workers are still running,
+- `watch_queue.sh` - displays how many workers are actively working (in real time),
 - `cancel_all.sh` - panic button to kill all your workers (it won't kill your interactive session though),
-- `partial_cleanup.sh` - run this if you already launched `run_pipeline.sh` and want to run it again with a different number of inputs,
-- `full_cleanup.sh` - run this to perform `partial_cleanup.sh` and to nuke the Python virtual environment `run_pipeline.sh` creates if anything went south (it "shouldn't").
+- `soft_cleanup.sh` - removes temporary files apart from the ones that can take ages to create (the dataset, results and `indra_venv`),
+- `hard_cleanup.sh` - runs `soft_cleanup.sh` and removes any leftover datasets, results and `indra_venv`.
 
-## Running (simplified)
+## Running
 
-1. Download the Reach jar available [here](https://owncloud.lcsb.uni.lu/s/WAvPyRYX4B3AfbM/authenticate)
+1. Get the Reach jar available [here](https://owncloud.lcsb.uni.lu/s/WAvPyRYX4B3AfbM/authenticate). Ask us, the project's authors for the password.
 
-2. If needed, run either of the cleanup scripts (explained in the previous section).
-
-3. Type:
+2. Type into your shell:
 ```sh
-srun run_pipeline.sh <number of workers> <number of articles>
+sbatch --nodes [num workers] run_pipeline.sh <num articles>
 ```
-
-This will load all of Indra's dependencies, create a Python container, download articles in NXML format and launch workers to work on them.
+Where `[num workers]` is the number of workers (nodes) to be used and  `<num articles>` is the number of articles to process (defaults to 100k).
 
 ## Results
 
-The results are in the, you guessed it, `results/` directory. It contains subdirectories named `results/worker-i` where `i` is a worker's id and a special subdirectory `results/MASTER`. Within it is a summary of the program's execution:
-- `final_consolidation.json`: aggregated statements for all workers from their local processing phase,
-- `local_consolidation_stats.csv`: statistics (time taken) for all workers' local processing phase,
-- `final_consolidation_stats.csv`: statistics (time taken) for the master's aggregation phase.
+The pipeline's results are located in the `results-[num workers]-workers-[num articles]-articles` directory, which contains:
+
+- subdirectories of the form`results/worker-[id]` where `[id]` is a worker's id 
+- a special subdirectory `results/MASTER` containing a summary of the program's execution:
+    - `final_consolidation.json`: combined output of all workers' local processing phases,
+    - `local_consolidation_stats.csv`: stats (time taken) for all workers' local processing phase,
+    - `final_consolidation_stats.csv`: stats (time taken) for the master's aggregation phase.
 
 ## TODOs
+
 - [ ] Test for the most optimal worker count
 - [ ] Plot the speedup curve as a function of the worker count (powers of two)
 - [ ] Verify that workers' progress is correctly pickled:
