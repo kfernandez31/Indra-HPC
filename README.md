@@ -26,9 +26,19 @@ Utilities:
 
 2. Type into your shell:
 ```sh
-sbatch --nodes [num workers] run_pipeline.sh <num articles>
+sbatch --ntasks [num workers] run_pipeline.sh <num articles>
 ```
-Where `[num workers]` is the number of workers (nodes) to be used and  `<num articles>` is the number of articles to process (defaults to 100k).
+Where `[num workers]` is the number of workers (nodes) to be used and  `<num articles>` the number of articles to process (defaults to 100k). You can also pass in a value for the in-worker parallelism with `--cpus-per-task` like so:
+```sh
+sbatch --ntasks [num workers] --cpus-per-task [some value] run_pipeline.sh <num articles>
+```
+This value is used for the **preassembly** phase of the local stage of processing.
+
+### Example:
+The following will execute the pipeline to analyse 10k articles with 16 workers, each running on 2 cores:
+```sh
+sbatch --ntasks 16 --cpus-per-task 2 run_pipeline.sh 10000
+```
 
 ## Results
 

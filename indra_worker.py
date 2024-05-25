@@ -150,7 +150,6 @@ def collect_local_stats():
         log_info(f"Waiting for {cnt_active} workers to finish...", master=True)
         log_info(f"Stragglers: {stragglers}", master=True)
 
-
         time.sleep(5) # to not overheat the processor
 
         for wid in range(config['num_workers']):

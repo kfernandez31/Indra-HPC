@@ -1,15 +1,13 @@
 #!/bin/bash -l
-#SBATCH --job-name        indra_pipeline
-#SBATCH --output          SLURM_%x_%j.log
-#SBATCH --error           SLURM_%x_%j.log
-#SBATCH --ntasks-per-node 1
-#SBATCH --time            01:00:00
-#SBATCH --partition       batch
-#SBATCH --qos             normal
-#SBATCH --mem             16GB
+#SBATCH --job-name      indra_pipeline
+#SBATCH --output        SLURM_%x_%j.log
+#SBATCH --error         SLURM_%x_%j.log
+#SBATCH --cpus-per-task 1
+#SBATCH --time          24:00:00 # TODO: toggle
+#SBATCH --partition     batch
+#SBATCH --qos           normal
 
 source utils.sh
-
 
 INPUT_CNT_THRESH="$1"
 if [ -z "${INPUT_CNT_THRESH}" ]; then
