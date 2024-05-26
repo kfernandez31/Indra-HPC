@@ -6,7 +6,7 @@ This is a realistic computational biology pipeline on HPC using the [Indra](http
 - Phase 1 (local): Launch $n$ workers on $m$ inputs, having each worker handle roughly $\frac{n}{m}$ inputs
 - Phase 2 (master): Select a worker (in our case it is always worker 0) to become the master. It shall wait until all workers finish and will summarize their results. 
 
-## Individual scripts' description
+## Scripts' description
 
 The only script you need to about is `run_pipeline.sh`, which has been described in the next section. 
 
@@ -18,7 +18,8 @@ Utilities:
 - `watch_queue.sh` - displays how many workers are actively working (in real time),
 - `cancel_all.sh` - panic button to kill all your workers (it won't kill your interactive session though),
 - `soft_cleanup.sh` - removes temporary files apart from the ones that can take ages to create (the dataset, results and `indra_venv`),
-- `hard_cleanup.sh` - runs `soft_cleanup.sh` and removes any leftover datasets, results and `indra_venv`.
+- `hard_cleanup.sh` - runs `soft_cleanup.sh` and removes any leftover datasets, results and `indra_venv`
+- `demonstration.sh` - runs the pipeline with different worker counts as separate SLURM jobs. Used for demonstration purposes.
 
 ## Running
 
@@ -26,23 +27,26 @@ Utilities:
 
 2. Type into your shell:
 ```sh
-sbatch --ntasks [num workers] run_pipeline.sh <num articles>
+sbatch run_pipeline.sh <num_articles>
 ```
-Where `[num workers]` is the number of workers (nodes) to be used and  `<num articles>` the number of articles to process (defaults to 100k). You can also pass in a value for the in-worker parallelism with `--cpus-per-task` like so:
-```sh
-sbatch --ntasks [num workers] --cpus-per-task [some value] run_pipeline.sh <num articles>
-```
-This value is used for the **preassembly** phase of the local stage of processing.
+This will run the pipeline to process `<num_articles>` articles (defaults to 100,000).
 
-### Example:
-The following will execute the pipeline to analyse 10k articles with 16 workers, each running on 2 cores:
+### Additional parameters
+
+- `--ntasks=1`: number of workers. The workers are by default separate SLURM processes distributed among one or possibly more nodes,
+- `--cpus-per-task=1` : number of cores for a worker to use during its preassembly phase,
+- `--time`: processing one article takes up to 1.5min on average. Adjust this accordingly to be a polite SLURM user.
+
+### Example
+
+The following will execute the pipeline on 50,000 articles with 16 workers, each preassembling with 4 cores:
 ```sh
-sbatch --ntasks 16 --cpus-per-task 2 run_pipeline.sh 10000
+sbatch --ntasks=16 --cpus-per-task=4 --time=12:00:00 run_pipeline.sh 50000
 ```
 
 ## Results
 
-The pipeline's results are located in the `results-[num workers]-workers-[num articles]-articles` directory, which contains:
+The pipeline's results are located in the `results-[num_workers]-workers-[num_articles]-articles` directory, which contains:
 
 - subdirectories of the form`results/worker-[id]` where `[id]` is a worker's id 
 - a special subdirectory `results/MASTER` containing a summary of the program's execution:
@@ -52,18 +56,13 @@ The pipeline's results are located in the `results-[num workers]-workers-[num ar
 
 ## TODOs
 
-- [ ] Test for the most optimal worker count
-- [ ] Plot the speedup curve as a function of the worker count (powers of two)
 - [ ] Verify that workers' progress is correctly pickled:
     - [ ] `get_statements_from_xmls`
     - [ ] `consolidate_stmts` (local)
     - [ ] `consolidate_stmts` (master)
-- [ ] Toggle walltime in `spawn_indra_worker.sh` (to be a polite ULHPC user)
-- [ ] Toggle `PICKLING_FREQENCY` in `indra_worker.py`
 
 ## Possible refinements
-- Some fault tolerance mechanisms
-    - eg. a time cutoff for stragglers, or a server that
+- More fault tolerance mechanisms
     - distributed leader election and dynamic work assignment
     - respawning processes
-- Piping to zips with checksum...?
+- Piping jsons to zips with checksum...?

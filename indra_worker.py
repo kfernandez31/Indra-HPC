@@ -77,10 +77,7 @@ def get_statements_from_xmls():
         # output_json = get_own_path(f'reach_output-{start + i}.json')
 
         t, rp = timeit(lambda: reach.process_nxml_file(xml_file, offline=True, output_fname=output_json))
-        if rp is None:
-            logger.fatal(f"{pretty_worker_name(config['worker_id'])}: Failed to obtain Reach processor")
-            exit(1)
-        elif rp.statements is None:
+        if rp is None or rp.statements is None:
             logger.error(f"{pretty_worker_name(config['worker_id'])}: Failed to process file {xml_file}")
         else:
             # Extract statements
@@ -95,7 +92,7 @@ def get_statements_from_xmls():
         log_info(f"Progress: {i + 1}/{chunk_size} articles ({progress(i)}%)")
 
     # Save statistics
-    local_stats['processing_mean_time']  = mean(times)
+    local_stats['processing_mean_time']  = mean(times) if len(times) > 0 else 0 
     local_stats['processing_total_time'] = sum(times)
 
     return res

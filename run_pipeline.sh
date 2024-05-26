@@ -3,14 +3,16 @@
 #SBATCH --output        SLURM_%x_%j.log
 #SBATCH --error         SLURM_%x_%j.log
 #SBATCH --cpus-per-task 1
-#SBATCH --time          24:00:00 # TODO: toggle
+#SBATCH --ntasks        1
+#SBATCH --mem-per-cpu   16GB
+#SBATCH --time          24:00:00 
 #SBATCH --partition     batch
 #SBATCH --qos           normal
 
 source utils.sh
 
 INPUT_CNT_THRESH="$1"
-if [ -z "${INPUT_CNT_THRESH}" ]; then
+if [ -z "$INPUT_CNT_THRESH" ]; then
     INPUT_CNT_THRESH=100000
 fi
 
@@ -91,7 +93,12 @@ OUTPUT_PATH="results-$SLURM_NPROCS-workers-$INPUT_CNT_THRESH-articles"
 mkdir -p "$OUTPUT_PATH"
 
 start_time=$(date +%s)
-srun --ntasks="$SLURM_NPROCS" ./spawn_indra_worker.sh "$INPUT_PATH" "$OUTPUT_PATH"
+
+srun                                                 \
+--ntasks="$SLURM_NPROCS"                             \
+--cpus-per-task="$SLURM_CPUS_PER_TASK"               \
+./spawn_indra_worker.sh "$INPUT_PATH" "$OUTPUT_PATH"
+
 end_time=$(date +%s)
 elapsed_time=$((end_time - start_time))
 echo "Results saved in '$OUTPUT_PATH'"
