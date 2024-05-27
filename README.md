@@ -54,6 +54,16 @@ The pipeline's results are located in the `results-[num_workers]-workers-[num_ar
     - `local_consolidation_stats.csv`: stats (time taken) for all workers' local processing phase,
     - `final_consolidation_stats.csv`: stats (time taken) for the master's aggregation phase.
 
+### Example
+
+An example output is available in `results/results-4-workers-1000-articles` which as the name suggests contains the results for 4 workers on 1000 articles. Each worker was assigned one CPU core.
+
+## Performance
+
+Since the problem is [embarassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel), the performance scales extremely well with the number of workers. The following plot is taken for worker counts of $1,2,\ldots, 512$, each worker running on a single core, for a dataset of 1000 entries:
+
+![title](results/time_vs_workers_plot.png)
+
 ## TODOs
 
 - [ ] Verify that workers' progress is correctly pickled:

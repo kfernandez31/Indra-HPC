@@ -1,0 +1,2 @@
+worker_id,processing_mean_time,processing_total_time,local_consolidation_grounding,local_consolidation_sequence,local_consolidation_preassembly,local_consolidation_total
+0,77.87099672508239,19467.7491812706,21.117443084716797,21.07510018348694,0.8496372699737549,43.04218053817749
